@@ -179,30 +179,6 @@ export function createDiscussionSetupHandler() {
       await writeFile(join(commandsDir, "discussion.md"), COMMAND_DISCUSSION, "utf-8")
       results.push("Created: discussion.md")
 
-      const jsonConfig = `{
-  "agent": {
-    "discussion-host": {
-      "mode": "primary",
-      "description": "讨论主持人 - 发起话题、协调讨论、总结分析",
-      "permission": {
-        "task": {
-          "analyst": "allow"
-        }
-      },
-      "tools": {
-        "discussion-start": true,
-        "discussion-record": true,
-        "discussion-summary": true
-      }
-    },
-    "analyst": {
-      "mode": "subagent",
-      "description": "分析者 - 从特定角度分析问题，与其他分析者协作讨论",
-      "task_budget": 15
-    }
-  }
-}`
-
       return `✅ 讨论插件配置完成！重启 opencode 即可使用 /discussion 命令启动讨论！
 `
     } catch (error) {
