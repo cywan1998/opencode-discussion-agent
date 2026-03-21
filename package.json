@@ -1,0 +1,43 @@
+{
+  "name": "opencode-debate-agent",
+  "version": "1.0.0",
+  "description": "OpenCode plugin for structured debate discussions between AI agents",
+  "main": ".opencode/plugin/index.js",
+  "types": ".opencode/plugin/index.d.ts",
+  "files": [
+    ".opencode"
+  ],
+  "scripts": {
+    "build": "bun build.ts",
+    "dev": "bun build.ts --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'No linter configured'",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "bun-types": "^1.0.0",
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.0.0"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "debate",
+    "agent",
+    "discussion"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourname/opencode-debate-agent"
+  },
+  "bugs": {
+    "url": "https://github.com/yourname/opencode-debate-agent/issues"
+  }
+}
