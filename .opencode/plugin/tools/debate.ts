@@ -3,7 +3,7 @@ import { existsSync } from "node:fs"
 import { resolve, dirname, join } from "node:path"
 import type { PluginInput } from "@opencode-ai/plugin"
 import type { DebateSession } from "../types"
-import { generateDebateHeader, generateRoundEntry, generateSummarySection } from "../utils/logger"
+import { generateDiscussionHeader, generateSummarySection } from "../utils/logger"
 import AGENT_DISCUSSION_HOST from "../prompts/agents/discussion-host.mdx"
 import AGENT_ANALYST from "../prompts/agents/analyst.mdx"
 import COMMAND_DISCUSSION from "../prompts/commands/discussion.mdx"
@@ -43,7 +43,7 @@ export function createDiscussionStartHandler(ctx: PluginInput) {
         createdAt: new Date().toISOString(),
       }
 
-      const header = generateDebateHeader(topic, analystRoles, "", maxRounds)
+      const header = generateDiscussionHeader(topic, analystRoles, maxRounds)
       const logsDir = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR)
       const topicDir = join(logsDir, topicFolder)
 
@@ -70,28 +70,23 @@ export function createDiscussionStartHandler(ctx: PluginInput) {
 
 export function createDiscussionRecordHandler(ctx: PluginInput) {
   return async function handleDiscussionRecord(args: {
-    logFile: string
+    topic: string
     round: number
     analystName: string
     content: string
-    thinking?: string
   }): Promise<string> {
     try {
       const { directory } = ctx
-      const { logFile, round, analystName, content, thinking } = args
+      const { topic, round, analystName, content } = args
 
-      const analystLogFile = `analyst-${analystName}.log`
-      const entry = `### 第 ${round} 轮 - ${analystName}\n\n**思考过程**: ${thinking || ""}\n\n**分析内容**:\n${content}\n\n---\n`
-      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, logFile, analystLogFile)
+      const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50)
+
+      const entry = `### 第 ${round} 轮 - ${analystName}\n\n${content}\n\n---\n`
+      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, safeTopic, RECORD_FILE)
       const existingContent = await readFile(filePath, "utf-8").catch(() => "")
       await writeFile(filePath, existingContent + entry, "utf-8")
 
-      const summaryEntry = `### 第 ${round} 轮 - ${analystName}\n\n${content}\n\n---\n`
-      const recordPath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, logFile, RECORD_FILE)
-      const recordContent = await readFile(recordPath, "utf-8").catch(() => "")
-      await writeFile(recordPath, recordContent + summaryEntry, "utf-8")
-
-      return `${analystName} 第 ${round} 轮分析已记录`
+      return `${analystName} 第 ${round} 轮分析已记录到 record.log`
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
       return `记录失败: ${errMsg}`
@@ -101,23 +96,25 @@ export function createDiscussionRecordHandler(ctx: PluginInput) {
 
 export function createAnalystRecordHandler(ctx: PluginInput) {
   return async function handleAnalystRecord(args: {
+    topic: string
     role: string
     round: number
     content: string
   }): Promise<string> {
     try {
       const { directory } = ctx
-      const { role, round, content } = args
+      const { topic, role, round, content } = args
 
+      const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50)
       const safeRole = role.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_")
       const analystLogFile = `analyst-${safeRole}.log`
 
       const entry = `### 第 ${round} 轮 - ${role}\n\n${content}\n\n---\n`
-      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, analystLogFile)
+      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, safeTopic, analystLogFile)
       const existingContent = await readFile(filePath, "utf-8").catch(() => "")
       await writeFile(filePath, existingContent + entry, "utf-8")
 
-      return `分析者 ${role} 第 ${round} 轮分析已记录到 ${analystLogFile}`
+      return `${role} 第 ${round} 轮分析已记录到 ${analystLogFile}`
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
       return `记录失败: ${errMsg}`
@@ -127,7 +124,7 @@ export function createAnalystRecordHandler(ctx: PluginInput) {
 
 export function createDiscussionSummaryHandler(ctx: PluginInput) {
   return async function handleDiscussionSummary(args: {
-    logFile: string
+    topic: string
     summary: string
     consensus: string
     disagreements: string
@@ -135,15 +132,16 @@ export function createDiscussionSummaryHandler(ctx: PluginInput) {
   }): Promise<string> {
     try {
       const { directory } = ctx
-      const { logFile, summary, consensus, disagreements, conclusion } = args
+      const { topic, summary, consensus, disagreements, conclusion } = args
 
+      const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50)
       const report = generateSummarySection(summary, consensus, disagreements, conclusion)
-      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, logFile, SUMMARY_FILE)
+      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, safeTopic, SUMMARY_FILE)
 
       const existingContent = await readFile(filePath, "utf-8").catch(() => "")
       await writeFile(filePath, existingContent + report, "utf-8")
 
-      return `分析报告已生成并追加到 ${DEFAULT_DISCUSSION_LOG_DIR}/${logFile}/${SUMMARY_FILE}`
+      return `分析报告已生成并追加到 ${safeTopic}/${SUMMARY_FILE}`
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
       return `生成报告失败: ${errMsg}`

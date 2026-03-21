@@ -1,11 +1,10 @@
-export function generateDebateHeader(
+export function generateDiscussionHeader(
   topic: string,
-  questionerRole?: string,
-  answererRole?: string,
+  analystRoles?: string,
   maxRounds?: number
 ): string {
   const now = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })
-  return `# 辩论记录
+  return `# 讨论记录
 
 ## 基本信息
 
@@ -18,36 +17,11 @@ export function generateDebateHeader(
 
 ## 参与方
 
-### 提问者 (Questioner)
-
-- **身份**: ${questionerRole || "质疑方 - 挑战传统观点"}
-- **职责**: 针对话题提出深入问题，挑战对方观点
-
-### 回答者 (Answerer)
-
-- **身份**: ${answererRole || "辩护方 - 维护合理立场"}
-- **职责**: 对问题给出详细、有论据的回答
+${analystRoles ? `分析者角色: ${analystRoles}` : "待定"}
 
 ---
 
-## 对话记录
-
----
-`
-}
-
-export function generateRoundEntry(round: number, question: string, answer: string): string {
-  return `### 第 ${round} 轮
-
-**Q (提问者)**:
-
-${question}
-
----
-
-**A (回答者)**:
-
-${answer}
+## 讨论记录
 
 ---
 `
@@ -79,12 +53,12 @@ ${disagreements || "无"}
 
 ---
 
-### 结论
+### 综合建议
 
 ${conclusion}
 
 ---
 
-*辩论结束*
+*讨论结束*
 `
 }

@@ -43,7 +43,7 @@ export const discussionAgent: Plugin = async (ctx) => {
       "discussion-record": tool({
         description: "汇总记录 - 主持人使用，记录每轮各分析者的观点摘要到record.log",
         args: {
-          logFile: tool.schema.string().describe("日志文件夹名"),
+          topic: tool.schema.string().describe("讨论话题"),
           round: tool.schema.number().describe("当前轮次"),
           analystName: tool.schema.string().describe("分析者名称"),
           content: tool.schema.string().describe("分析内容摘要"),
@@ -55,6 +55,7 @@ export const discussionAgent: Plugin = async (ctx) => {
       "analyst-record": tool({
         description: "分析者记录 - 分析者使用，将自己的分析记录到个人日志",
         args: {
+          topic: tool.schema.string().describe("讨论话题"),
           role: tool.schema.string().describe("分析者角色名，如 tech, economic, risk"),
           round: tool.schema.number().describe("当前轮次"),
           content: tool.schema.string().describe("分析内容"),
@@ -66,7 +67,7 @@ export const discussionAgent: Plugin = async (ctx) => {
       "discussion-summary": tool({
         description: "生成讨论分析报告",
         args: {
-          logFile: tool.schema.string().describe("日志文件夹名"),
+          topic: tool.schema.string().describe("讨论话题"),
           summary: tool.schema.string().describe("讨论摘要"),
           consensus: tool.schema.string().describe("共识点"),
           disagreements: tool.schema.string().describe("分歧点"),

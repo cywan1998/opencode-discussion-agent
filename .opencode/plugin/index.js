@@ -7,9 +7,9 @@ import { existsSync } from "node:fs";
 import { resolve, join } from "node:path";
 
 // .opencode/plugin/utils/logger.ts
-function generateDebateHeader(topic, questionerRole, answererRole, maxRounds) {
+function generateDiscussionHeader(topic, analystRoles, maxRounds) {
   const now = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
-  return `# 辩论记录
+  return `# 讨论记录
 
 ## 基本信息
 
@@ -22,19 +22,11 @@ function generateDebateHeader(topic, questionerRole, answererRole, maxRounds) {
 
 ## 参与方
 
-### 提问者 (Questioner)
-
-- **身份**: ${questionerRole || "质疑方 - 挑战传统观点"}
-- **职责**: 针对话题提出深入问题，挑战对方观点
-
-### 回答者 (Answerer)
-
-- **身份**: ${answererRole || "辩护方 - 维护合理立场"}
-- **职责**: 对问题给出详细、有论据的回答
+${analystRoles ? `分析者角色: ${analystRoles}` : "待定"}
 
 ---
 
-## 对话记录
+## 讨论记录
 
 ---
 `;
@@ -60,13 +52,13 @@ ${disagreements || "无"}
 
 ---
 
-### 结论
+### 综合建议
 
 ${conclusion}
 
 ---
 
-*辩论结束*
+*讨论结束*
 `;
 }
 
@@ -104,7 +96,7 @@ tools:
    - 依次或并行调用各分析者，请他们从各自角度分析问题
    - 使用 \`discussion-record\` 记录每位分析者的观点
    - 鼓励分析者阅读其他人的观点，进行回应和补充
-   - **提示**: 每次调用分析者时，可以告诉他们讨论记录位置：\`{讨论目录}/record.log\` 和 \`{讨论目录}/{analyst-name}.log\`
+   - **提示**: 每次调用分析者时，可以告诉他们讨论记录位置：\`{讨论目录}/record.log\`
 3. **终止判断**: 
    - 检查是否达到最大轮数
    - 检查是否已形成较为完善的共识或方案
@@ -142,7 +134,7 @@ tools:
 
     task(
       description="技术专家分析",
-      prompt="你的角色是 tech（技术专家），当前是第 1 轮。请从技术可行性角度分析这个方案，重点关注：1) 技术难度 2) 实现路径 3) 潜在技术风险。分析完成后，使用 analyst-record 工具记录：role=tech, round=1, content=你的分析内容。",
+      prompt="讨论话题是"Java学习规划"，你的角色是 tech（技术专家），当前是第 1 轮。请从技术可行性角度分析，重点关注：1) 技术难度 2) 实现路径 3) 潜在技术风险。分析完成后，使用 analyst-record 工具记录：topic=Java学习规划, role=tech, round=1, content=你的分析内容。",
       agent="analyst"
     )
 
@@ -218,6 +210,7 @@ tools:
 ## 记录要求
 
 完成分析后，使用 analyst-record 工具记录：
+- topic: 讨论话题（主持人在任务中已告知）
 - role: 你的角色名称（主持人在任务中已告知）
 - round: 当前轮次（主持人在任务中已告知）
 - content: 你的完整分析内容
@@ -270,7 +263,7 @@ function createDiscussionStartHandler(ctx) {
         logFile: topicFolder,
         createdAt: new Date().toISOString()
       };
-      const header = generateDebateHeader(topic, analystRoles, "", maxRounds);
+      const header = generateDiscussionHeader(topic, analystRoles, maxRounds);
       const logsDir = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR);
       const topicDir = join(logsDir, topicFolder);
       if (!existsSync(logsDir)) {
@@ -303,30 +296,18 @@ function createDiscussionRecordHandler(ctx) {
   return async function handleDiscussionRecord(args) {
     try {
       const { directory } = ctx;
-      const { logFile, round, analystName, content, thinking } = args;
-      const analystLogFile = `analyst-${analystName}.log`;
+      const { topic, round, analystName, content } = args;
+      const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50);
       const entry = `### 第 ${round} 轮 - ${analystName}
 
-**思考过程**: ${thinking || ""}
-
-**分析内容**:
 ${content}
 
 ---
 `;
-      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, logFile, analystLogFile);
+      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, safeTopic, RECORD_FILE);
       const existingContent = await readFile(filePath, "utf-8").catch(() => "");
       await writeFile(filePath, existingContent + entry, "utf-8");
-      const summaryEntry = `### 第 ${round} 轮 - ${analystName}
-
-${content}
-
----
-`;
-      const recordPath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, logFile, RECORD_FILE);
-      const recordContent = await readFile(recordPath, "utf-8").catch(() => "");
-      await writeFile(recordPath, recordContent + summaryEntry, "utf-8");
-      return `${analystName} 第 ${round} 轮分析已记录`;
+      return `${analystName} 第 ${round} 轮分析已记录到 record.log`;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       return `记录失败: ${errMsg}`;
@@ -337,7 +318,8 @@ function createAnalystRecordHandler(ctx) {
   return async function handleAnalystRecord(args) {
     try {
       const { directory } = ctx;
-      const { role, round, content } = args;
+      const { topic, role, round, content } = args;
+      const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50);
       const safeRole = role.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
       const analystLogFile = `analyst-${safeRole}.log`;
       const entry = `### 第 ${round} 轮 - ${role}
@@ -346,10 +328,10 @@ ${content}
 
 ---
 `;
-      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, analystLogFile);
+      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, safeTopic, analystLogFile);
       const existingContent = await readFile(filePath, "utf-8").catch(() => "");
       await writeFile(filePath, existingContent + entry, "utf-8");
-      return `分析者 ${role} 第 ${round} 轮分析已记录到 ${analystLogFile}`;
+      return `${role} 第 ${round} 轮分析已记录到 ${analystLogFile}`;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       return `记录失败: ${errMsg}`;
@@ -360,12 +342,13 @@ function createDiscussionSummaryHandler(ctx) {
   return async function handleDiscussionSummary(args) {
     try {
       const { directory } = ctx;
-      const { logFile, summary, consensus, disagreements, conclusion } = args;
+      const { topic, summary, consensus, disagreements, conclusion } = args;
+      const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50);
       const report = generateSummarySection(summary, consensus, disagreements, conclusion);
-      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, logFile, SUMMARY_FILE);
+      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, safeTopic, SUMMARY_FILE);
       const existingContent = await readFile(filePath, "utf-8").catch(() => "");
       await writeFile(filePath, existingContent + report, "utf-8");
-      return `分析报告已生成并追加到 ${DEFAULT_DISCUSSION_LOG_DIR}/${logFile}/${SUMMARY_FILE}`;
+      return `分析报告已生成并追加到 ${safeTopic}/${SUMMARY_FILE}`;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       return `生成报告失败: ${errMsg}`;
@@ -393,29 +376,6 @@ function createDiscussionSetupHandler() {
       results.push("Created: analyst.md");
       await writeFile(join(commandsDir, "discussion.md"), discussion_default, "utf-8");
       results.push("Created: discussion.md");
-      const jsonConfig = `{
-  "agent": {
-    "discussion-host": {
-      "mode": "primary",
-      "description": "讨论主持人 - 发起话题、协调讨论、总结分析",
-      "permission": {
-        "task": {
-          "analyst": "allow"
-        }
-      },
-      "tools": {
-        "discussion-start": true,
-        "discussion-record": true,
-        "discussion-summary": true
-      }
-    },
-    "analyst": {
-      "mode": "subagent",
-      "description": "分析者 - 从特定角度分析问题，与其他分析者协作讨论",
-      "task_budget": 15
-    }
-  }
-}`;
       return `✅ 讨论插件配置完成！重启 opencode 即可使用 /discussion 命令启动讨论！
 `;
     } catch (error) {
@@ -455,7 +415,7 @@ var discussionAgent = async (ctx) => {
       "discussion-record": tool({
         description: "汇总记录 - 主持人使用，记录每轮各分析者的观点摘要到record.log",
         args: {
-          logFile: tool.schema.string().describe("日志文件夹名"),
+          topic: tool.schema.string().describe("讨论话题"),
           round: tool.schema.number().describe("当前轮次"),
           analystName: tool.schema.string().describe("分析者名称"),
           content: tool.schema.string().describe("分析内容摘要")
@@ -467,6 +427,7 @@ var discussionAgent = async (ctx) => {
       "analyst-record": tool({
         description: "分析者记录 - 分析者使用，将自己的分析记录到个人日志",
         args: {
+          topic: tool.schema.string().describe("讨论话题"),
           role: tool.schema.string().describe("分析者角色名，如 tech, economic, risk"),
           round: tool.schema.number().describe("当前轮次"),
           content: tool.schema.string().describe("分析内容")
@@ -478,7 +439,7 @@ var discussionAgent = async (ctx) => {
       "discussion-summary": tool({
         description: "生成讨论分析报告",
         args: {
-          logFile: tool.schema.string().describe("日志文件夹名"),
+          topic: tool.schema.string().describe("讨论话题"),
           summary: tool.schema.string().describe("讨论摘要"),
           consensus: tool.schema.string().describe("共识点"),
           disagreements: tool.schema.string().describe("分歧点"),
@@ -497,5 +458,5 @@ export {
   plugin_default as default
 };
 
-//# debugId=517B023F5279520964756E2164756E21
+//# debugId=9801CF2D5A01FDBD64756E2164756E21
 //# sourceMappingURL=index.js.map
