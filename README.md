@@ -1,26 +1,25 @@
-# OpenCode Debate Agent
+# OpenCode Discussion Agent
 
-An OpenCode plugin that enables structured debate discussions between AI agents.
+An OpenCode plugin that enables collaborative discussion between multiple AI agents to explore topics and develop solutions together.
 
 ## Overview
 
-This plugin provides a debate framework with:
-- **Debate Host** (primary agent): Orchestrates the discussion
-- **Questioner** (subagent): Poses challenging questions
-- **Answerer** (subagent): Provides detailed responses
+This plugin provides a discussion framework with:
+- **Discussion Host** (primary agent): Orchestrates the discussion and coordinates analysts
+- **Analysts** (subagents): Multiple specialists analyzing from different angles
 
-The agents engage in iterative Q&A until consensus is reached or max rounds are met. All discussions are recorded in Markdown format.
+The agents collaborate rather than debate - each brings their expertise to collectively deepen understanding and develop better solutions. All discussions are recorded for reference.
 
 ## Features
 
-- Custom tools for debate management:
-  - `debate-setup`: Auto-configure agents and commands (run once after install)
-  - `debate-start`: Initialize a debate session
-  - `debate-record`: Record each Q&A round
-  - `debate-summary`: Generate analysis report
-- Configurable roles for questioner and answerer
-- Markdown-formatted debate logs
-- Consensus detection and max round limits
+- Custom tools for discussion management:
+  - `discussion-setup`: Auto-configure agents and commands (run once after install)
+  - `discussion-start`: Initialize a discussion session
+  - `discussion-record`: Record each analyst's analysis
+  - `discussion-summary`: Generate analysis report
+- Flexible analyst roles - customize based on topic needs (technical, economic, risk, legal, etc.)
+- Detailed logging with both summary and individual analyst records
+- Consensus detection and configurable round limits
 - Web search capabilities for real-time information
 
 ## Quick Start
@@ -41,25 +40,62 @@ Restart your OpenCode session.
 
 ### 3. Run Setup
 
-input this to AI init:
+Input this during AI init:
 
 ```
-use debate-setup to init debate agents
+use discussion-setup to init discussion agents
 ```
 
 This will automatically create:
-- `~/.config/opencode/agents/debate-host.md`
-- `~/.config/opencode/agents/questioner.md`
-- `~/.config/opencode/agents/answerer.md`
-- `~/.config/opencode/commands/debate.md`
+- `~/.config/opencode/agents/discussion-host.md`
+- `~/.config/opencode/agents/analyst.md`
+- `~/.config/opencode/commands/discussion.md`
 
 ### 4. Restart and Use
 
-Restart OpenCode, then start a debate:
+Restart OpenCode, then start a discussion:
 
 ```
-/debate 人工智能是否会取代人类工作
+/discussion 如何优化团队协作流程
 ```
+
+## Discussion Workflow
+
+1. **Host** starts the discussion with a topic
+2. **Host** assigns roles to analysts (e.g., Technical Expert, Economic Analyst, Risk Analyst)
+3. Each **Analyst**:
+   - Reviews previous discussions
+   - Provides analysis from their perspective
+   - Responds to other analysts' viewpoints
+   - Records their analysis
+4. **Host** summarizes consensus and disagreements
+5. Final report generated
+
+## Logging Structure
+
+```
+discussion-logs/{topic}/
+├── record.log           # Summary of all discussions
+├── summarize.log        # Final analysis report
+└── analyst-{name}.log  # Individual analyst's detailed records
+```
+
+## Customizing Analysts
+
+The host can assign any roles based on the topic. Examples:
+
+| Topic Type | Suggested Analysts |
+|------------|------------------|
+| Technical decisions | Technical Lead, User Experience, Security Expert |
+| Business planning | Market Analyst, Financial Analyst, Operations Expert |
+| Policy making | Legal Advisor, Ethics Expert, Stakeholder Representative |
+| Project planning | Project Manager, Risk Analyst, Resource Planner |
+
+Each analyst receives context including:
+- Their assigned role and focus areas
+- The discussion topic
+- Access to previous discussion records
+- Web search capabilities for research
 
 ## Customizing Models
 
@@ -67,34 +103,23 @@ The default configuration does not specify models. You can customize by editing 
 
 ### Edit Agent Markdown Files
 
-Edit `~/.config/opencode/agents/debate-host.md`:
+Edit `~/.config/opencode/agents/discussion-host.md`:
 
 ```yaml
 ---
-description: 辩论主持人
+description: 讨论主持人
 mode: primary
 model: qwen3-max  # Add your preferred model
 ---
 ```
 
-Edit `~/.config/opencode/agents/questioner.md`:
+Edit `~/.config/opencode/agents/analyst.md`:
 
 ```yaml
 ---
-description: 提问者
+description: 分析者
 mode: subagent
 model: claude-opus-4-5  # Add your preferred model
-task_budget: 20
----
-```
-
-Edit `~/.config/opencode/agents/answerer.md`:
-
-```yaml
----
-description: 回答者
-mode: subagent
-model: qwen3-max  # Add your preferred model
 task_budget: 20
 ---
 ```
@@ -103,9 +128,8 @@ task_budget: 20
 
 | Agent | Recommended Models |
 |-------|------------------|
-| debate-host | qwen3-max, claude-sonnet-4-5 |
-| questioner | qwen3-coder-plus, claude-opus-4-5 |
-| answerer | qwen3-max, claude-sonnet-4-5 |
+| discussion-host | qwen3-max, claude-sonnet-4-5 |
+| analyst | qwen3-coder-plus, claude-opus-4-5 |
 
 ## Project Structure
 
@@ -115,7 +139,7 @@ opencode-debate-agent/
 │   └── plugin/
 │       ├── index.ts       # Plugin entry point
 │       ├── tools/
-│       │   └── debate.ts # Debate tool implementations
+│       │   └── debate.ts # Discussion tool implementations
 │       ├── types/
 │       │   └── index.ts  # Type definitions
 │       └── utils/

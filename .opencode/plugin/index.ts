@@ -1,74 +1,71 @@
 import { type Plugin, tool } from "@opencode-ai/plugin"
 import {
-  createDebateStartHandler,
-  createDebateRecordHandler,
-  createDebateSummaryHandler,
-  createDebateSetupHandler,
+  createDiscussionStartHandler,
+  createDiscussionRecordHandler,
+  createDiscussionSummaryHandler,
+  createDiscussionSetupHandler,
 } from "./tools/debate"
 
-export const debateAgent: Plugin = async (ctx) => {
-  const handleDebateStart = createDebateStartHandler(ctx)
-  const handleDebateRecord = createDebateRecordHandler(ctx)
-  const handleDebateSummary = createDebateSummaryHandler(ctx)
-  const handleDebateSetup = createDebateSetupHandler()
+export const discussionAgent: Plugin = async (ctx) => {
+  const handleDiscussionStart = createDiscussionStartHandler(ctx)
+  const handleDiscussionRecord = createDiscussionRecordHandler(ctx)
+  const handleDiscussionSummary = createDiscussionSummaryHandler(ctx)
+  const handleDiscussionSetup = createDiscussionSetupHandler()
 
   return {
     tool: {
-      "debate-setup": tool({
-        description: "自动配置辩论插件 - 创建agent和command配置文件",
+      "discussion-setup": tool({
+        description: "自动配置讨论插件 - 创建agent和command配置文件",
         args: {},
         async execute() {
-          return await handleDebateSetup()
+          return await handleDiscussionSetup()
         },
       }),
-      "debate-start": tool({
-        description: "启动一场辩论讨论",
+      "discussion-start": tool({
+        description: "启动一场协作式讨论",
         args: {
-          topic: tool.schema.string().describe("辩论话题"),
-          questionerRole: tool.schema
+          topic: tool.schema.string().describe("讨论话题"),
+          analystRoles: tool.schema
             .string()
             .optional()
-            .describe("提问者角色描述"),
-          answererRole: tool.schema
-            .string()
-            .optional()
-            .describe("回答者角色描述"),
+            .describe("分析者角色描述，多个角色用分号分隔"),
           maxRounds: tool.schema
             .number()
             .default(10)
-            .describe("最大辩论轮数"),
+            .describe("最大讨论轮数"),
         },
         async execute(args, context) {
-          return await handleDebateStart(args)
+          return await handleDiscussionStart(args)
         },
       }),
-      "debate-record": tool({
-        description: "记录辩论对话到文件",
+      "discussion-record": tool({
+        description: "记录分析者的讨论内容",
         args: {
-          logFile: tool.schema.string().describe("日志文件名"),
+          logFile: tool.schema.string().describe("日志文件夹名"),
           round: tool.schema.number().describe("当前轮次"),
-          question: tool.schema.string().describe("提问者的提问"),
-          answer: tool.schema.string().describe("回答者的回答"),
+          analystName: tool.schema.string().describe("分析者名称，如 tech, economic, risk"),
+          content: tool.schema.string().describe("分析内容"),
+          thinking: tool.schema.string().optional().describe("思考过程"),
         },
         async execute(args, context) {
-          return await handleDebateRecord(args)
+          return await handleDiscussionRecord(args)
         },
       }),
-      "debate-summary": tool({
-        description: "生成辩论分析报告",
+      "discussion-summary": tool({
+        description: "生成讨论分析报告",
         args: {
-          logFile: tool.schema.string().describe("日志文件名"),
+          logFile: tool.schema.string().describe("日志文件夹名"),
           summary: tool.schema.string().describe("讨论摘要"),
           consensus: tool.schema.string().describe("共识点"),
           disagreements: tool.schema.string().describe("分歧点"),
-          conclusion: tool.schema.string().describe("结论"),
+          conclusion: tool.schema.string().describe("综合建议"),
         },
         async execute(args, context) {
-          return await handleDebateSummary(args)
+          return await handleDiscussionSummary(args)
         },
       }),
     },
   }
 }
 
-export default debateAgent
+export default discussionAgent

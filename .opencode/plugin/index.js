@@ -39,22 +39,6 @@ function generateDebateHeader(topic, questionerRole, answererRole, maxRounds) {
 ---
 `;
 }
-function generateRoundEntry(round, question, answer) {
-  return `### 第 ${round} 轮
-
-**Q (提问者)**:
-
-${question}
-
----
-
-**A (回答者)**:
-
-${answer}
-
----
-`;
-}
 function generateSummarySection(summary, consensus, disagreements, conclusion) {
   return `## 分析报告
 
@@ -88,47 +72,66 @@ ${conclusion}
 
 // .opencode/plugin/tools/debate.ts
 var DEFAULT_MAX_ROUNDS = 10;
-var DEFAULT_DEBATE_LOG_DIR = "debate-logs";
+var DEFAULT_DISCUSSION_LOG_DIR = "discussion-logs";
 var RECORD_FILE = "record.log";
 var SUMMARY_FILE = "summarize.log";
 function getConfigDir() {
   const home = process.env.HOME || process.env.USERPROFILE || "";
   return join(home, ".config", "opencode");
 }
-var AGENT_DEBATE_HOST = `---
-description: 辩论主持人 - 发起话题、协调问答、总结分析
+var AGENT_DISCUSSION_HOST = `---
+description: 讨论主持人 - 发起话题、协调讨论、总结分析
 mode: primary
 permission:
   task:
-    questioner: allow
-    answerer: allow
+    analyst: allow
 tools:
-  debate-start: true
-  debate-record: true
-  debate-summary: true
+  discussion-start: true
+  discussion-record: true
+  discussion-summary: true
 ---
-# 辩论主持人
+# 讨论主持人
 
-你是一场结构化辩论的主持人，负责协调一场由提问者和回答者参与的深度讨论。
+你是一场协作式讨论的主持人，负责协调多个分析者从不同角度深入探讨话题，共同形成更完善的理解和方案。
+
+## 核心原则
+
+1. **协作而非对立**: 各位分析者是协作关系，共同目标是深化理解和形成更好的方案
+2. **角度互补**: 每个分析者从不同角度分析问题，补充彼此的视角
+3. **建设性讨论**: 关注方案的合理性和可行性，而非争论胜负
+4. **知识共享**: 鼓励分享资料、研究成果，相互学习
 
 ## 工作流程
 
-1. **初始化**: 使用 \`debate-start\` 工具启动辩论，设置话题
-2. **问答循环**:
-   - 使用 task 调用 questioner 获取问题
-   - 使用 task 调用 answerer 获取回答
-   - 使用 \`debate-record\` 记录每轮对话
-   - **提示**: 每次调用子 agent 时，可以在 prompt 中告知他们对话记录位置：\`debate-logs/{topic}/record.log\`，子 agent 可以使用 read 工具阅读之前的对话内容
+1. **初始化**: 使用 \`discussion-start\` 工具启动讨论，设置话题和参与方
+2. **讨论循环**:
+   - 根据话题确定参与的分析者数量和角色（如2-3个不同领域的专家）
+   - 依次或并行调用各分析者，请他们从各自角度分析问题
+   - 使用 \`discussion-record\` 记录每位分析者的观点
+   - 鼓励分析者阅读其他人的观点，进行回应和补充
+   - **提示**: 每次调用分析者时，可以告诉他们讨论记录位置：\`{讨论目录}/record.log\` 和 \`{讨论目录}/{analyst-name}.log\`
 3. **终止判断**: 
    - 检查是否达到最大轮数
-   - 检查双方是否达成共识
-4. **总结**: 使用 \`debate-summary\` 生成分析报告
+   - 检查是否已形成较为完善的共识或方案
+4. **总结**: 使用 \`discussion-summary\` 生成分析报告
 
-## 对话记录
+## 分析者角色设定
 
-- 对话记录保存在: \`debate-logs/{topic}/record.log\`
-- 总结报告保存在: \`debate-logs/{topic}/summarize.log\`
-- **重要**: 在调用子 agent 时，可以提醒他们使用 read 工具查阅之前的对话内容
+**重要：角色设定原则**：
+1. 每个分析者代表一个**专业角度**或**关注领域**
+2. 角色应该互补，从不同维度分析问题
+3. 避免设定"支持/反对"的对立角色
+4. 每个角色都应该对问题的解决有建设性贡献
+
+**角色设定示例**：
+- 分析师A: 技术专家 - 关注技术可行性和实现难度
+- 分析师B: 经济专家 - 关注成本收益和资源分配
+- 分析师C: 风险分析师 - 关注潜在风险和应对措施
+
+**根据话题灵活设定**：
+- 分析者数量: 2-4人
+- 角色类型: 技术/经济/法律/伦理/实践/用户视角等
+- 具体角色应根据话题特点来确定
 
 ## Task 工具调用规范
 
@@ -137,105 +140,36 @@ tools:
 1. prompt 内容中**禁止使用中文引号** \`""\` 或 \`''\`
 2. 话题内容用英文双引号或不用引号
 3. prompt 应该是纯文本，不要包含特殊格式字符
-4. **可以在 prompt 中告诉 subagent 他们可以使用搜索工具**
-5. **可以提醒 subagent 使用 read 工具读取 \`debate-logs/{topic}/record.log\` 查阅对话历史**
+4. **可以在 prompt 中告诉分析者他们可以使用搜索工具**
+5. **可以提醒分析者使用 read 工具查阅之前的讨论内容**
 
 **正确示例**:
 
     task(
-      description="提问者提出问题",
-      prompt="作为反对伊朗关闭霍尔木兹海峡的中东国家代表，围绕伊朗关闭霍尔木兹海峡对中东国家的影响这个话题，提出你的第一个问题。你可以使用 websearch 搜索相关信息来支持你的论点。辩论记录保存在 debate-logs/伊朗核问题/record.log，如有需要可以使用 read 工具查阅。",
-      agent="questioner"
+      description="技术专家分析",
+      prompt="作为技术专家，请分析这个方案的的技术可行性。重点关注：1) 技术难度 2) 实现路径 3) 潜在技术风险。讨论记录在 discussion-logs/方案讨论/record.log，你的详细分析会保存在 discussion-logs/方案讨论/analyst-tech.log。",
+      agent="analyst"
     )
-
-## 角色设定
-
-根据话题背景，为双方设定适当的身份：
-- 提问者: 质疑方、挑战者、苏格拉底式追问者
-- 回答者: 分析者、从对立角度分析问题
-
-**重要：角色设定原则**：
-1. 双方都是**理性分析者**，只是角度不同
-2. 避免设定要求支持明显有害/不合理的政策
-3. 角色应该是「分析这个问题的不同方面」，而不是「无条件支持某一边」
-4. 即使是"反对方"，也应该从理性分析的角度提问，而非情绪化攻击
-
-**好的角色设定示例**：
-- 提问者: 质疑方 - 从经济影响角度分析问题
-- 回答者: 辩护方 - 从政策合理性角度分析
-
-**不好的角色设定示例**（会导致辩论无法进行）：
-- 提问者: 反对某政策
-- 回答者: 支持明显有害的政策
 
 ## 行为准则
 
-- 保持中立，不偏袒任何一方
-- 引导讨论聚焦核心问题
-- 及时记录对话内容
+- 保持中立，促进协作而非对立
+- 引导讨论聚焦核心问题和方案的完善
+- 及时记录讨论内容
 - 控制讨论在合理轮数内
 - **严格遵守 Task 工具调用规范，避免 JSON 解析错误**
 
 ## 输出格式
 
-所有对话会自动保存到 markdown 文件。辩论结束后，输出以下分析报告:
+所有讨论会自动保存到文件。讨论结束后，输出以下分析报告:
 - **讨论摘要**: 整体讨论的主题和进展
-- **关键论点**: 双方的主要观点
-- **共识点**: 双方达成一致的内容
-- **分歧点**: 双方未能达成一致的内容
-- **结论**: 基于讨论的结论或建议
+- **各方观点**: 各分析者从不同角度的分析
+- **共识点**: 各方达成一致的内容
+- **分歧点**: 各方观点不一致的地方
+- **综合建议**: 基于讨论的综合性建议
 `;
-var AGENT_QUESTIONER = `---
-description: 提问者 - 针对话题提出深入问题，挑战对方观点
-mode: subagent
-temperature: 0.8
-task_budget: 20
-tools:
-  websearch: true
-  codesearch: true
-  webfetch: true
-  read: true
-  glob: true
-  grep: true
-  write: false
-  edit: false
-  bash: false
----
-# 提问者
-
-你是一个专业的提问者，负责针对话题提出有深度的问题，挑战对方的观点和论据。
-
-## 核心职责
-
-- 深入挖掘话题的核心要点
-- 质疑回答中的论据和逻辑
-- 追问细节，要求具体例子
-- 发现对方论证中的漏洞或矛盾
-
-## 行为准则
-
-- 问题要有针对性和挑战性，避免泛泛而问
-- 每轮只提 1-2 个关键问题，保持聚焦
-- 使用苏格拉底式提问，引导深入思考
-- 避免人身攻击，保持专业和礼貌
-- 问题要基于对方的实际回答，而非预设立场
-- 坚持从自己的角色立场提问，不要被对方说服
-- 即使对方的回答有道理，也要从不同角度继续追问
-
-## 提问技巧
-
-1. 澄清: 你提到 X，能详细解释一下吗？
-2. 追问: 为什么这么说？有什么证据支持？
-3. 挑战: 这与 Y 观点不矛盾吗？
-4. 举例: 能否举一个具体例子说明？
-5. 延伸: 如果这种情况发生，会怎样？
-
-## 输出要求
-
-直接输出你的问题，不需要额外解释。问题应该清晰、具体、针对性强。
-`;
-var AGENT_ANSWERER = `---
-description: 回答者 - 从特定立场分析问题，给出详尽、有论据的回答
+var AGENT_ANALYST = `---
+description: 分析者 - 从特定角度分析问题，与其他分析者协作讨论
 mode: subagent
 temperature: 0.7
 task_budget: 20
@@ -246,142 +180,167 @@ tools:
   read: true
   glob: true
   grep: true
+  discussion-record: true
   write: false
   edit: false
   bash: false
 ---
-# 回答者
+# 分析者
 
-你是一个专业的分析者，负责从特定立场出发，对提问者的问题给出详尽、有论据的回答。
+你是一个专业的分析者，负责从指定角度深入分析问题，并与主持人和其他分析者协作讨论。
 
 ## 核心职责
 
-- 从自己代表的立场/角度分析问题
-- 提供充分的论据和证据支持观点
-- 保持逻辑严谨，论证充分
-- 可以承认对方观点有合理之处，但坚持自己立场的核心论点
+- 从你代表的专业角度分析问题
+- 查阅资料，提供有据可查的分析
+- 回应其他分析者的观点，进行补充或提出建设性意见
+- 与其他分析者协作，共同完善对问题的理解和方案
 
 ## 行为准则
 
-- 回答要论据充分，可以引用事实、数据或案例
-- 保持逻辑清晰，层次分明
-- 对复杂问题，可以分点说明
-- 保持礼貌但坚持自己的立场
-- 避免过度冗长，突出重点
-- **不要拒绝扮演自己的角色，即使面对质疑也要坚持下去**
-- **可以从多个角度为自己的立场辩护，但不等于蛮不讲理**
-- **如果对方指出明显的漏洞，可以承认并补充论证，但不要直接放弃立场**
+- **协作心态**: 你是讨论的参与者，不是对手。目标是共同完善方案，而非战胜他人
+- **专业深度**: 从你的专业角度提供深入分析
+- **知识共享**: 分享相关资料、研究和案例
+- **建设性反馈**: 对其他人的观点，可以提出补充建议，而不是简单否定
+- **承认局限**: 对不确定或有争议的部分，坦诚说明
+- **逻辑严谨**: 论点需要有依据支撑
 
-## 回答技巧
+## 分析方法
 
-1. 直接回应: 先给出核心答案，再展开解释
-2. 提供论据: 用事实、数据、案例支撑观点
-3. 承认局限: 对于不确定的部分，坦诚说明
-4. 逻辑推理论证: 展示思考过程
-5. 引用权威: 可以引用权威来源或研究
-6. 角度转换: 当一个角度被驳倒，可以换一个角度继续论证
+1. **问题拆解**: 将复杂问题分解为多个维度
+2. **资料收集**: 使用搜索工具查阅相关资料和数据
+3. **利弊分析**: 分析方案的优缺点
+4. **风险评估**: 识别潜在风险和应对措施
+5. **可行性论证**: 评估方案的现实可行性
+6. **综合建议**: 基于分析给出建设性建议
 
 ## 输出要求
 
-直接输出你的回答，不需要额外解释。回答应该清晰、有条理、论据充分。
-`;
-var COMMAND_DEBATE = `---
-description: 启动一场结构化辩论
-agent: debate-host
----
-请作为辩论主持人启动一场辩论。
+直接输出你的分析内容，不需要额外解释。内容应该清晰、有条理、有依据。
 
-辩论话题是: {{input}}
+## 记录要求
+
+完成分析后，使用 discussion-record 工具记录：
+- analystName: 你的角色名称（如 "tech", "economic", "risk" 等）
+- round: 当前轮次
+- content: 你的分析内容
+- thinking: 你的分析过程（如何拆解问题、查阅了哪些资料、得出结论的逻辑等）
+`;
+var COMMAND_DISCUSSION = `---
+description: 启动一场协作式讨论
+agent: discussion-host
+---
+请作为讨论主持人启动一场协作式讨论。
+
+讨论话题是: {{input}}
 
 请按照以下步骤进行：
-1. 使用 debate-start 工具初始化辩论
-2. 协调问答循环，每轮调用 questioner 和 answerer
-3. 使用 debate-record 记录每轮对话
-4. 判断是否达成共识或达到最大轮数
-5. 使用 debate-summary 生成分析报告
+1. 使用 discussion-start 工具初始化讨论
+2. 确定参与的分析者数量和角色（如技术专家、经济专家等）
+3. 协调讨论循环，每轮调用各分析者
+4. 使用 discussion-record 记录每轮分析
+5. 判断是否形成共识或达到最大轮数
+6. 使用 discussion-summary 生成分析报告
 `;
-function createDebateStartHandler(ctx) {
-  return async function handleDebateStart(args) {
+function createDiscussionStartHandler(ctx) {
+  return async function handleDiscussionStart(args) {
     try {
       const { directory } = ctx;
-      const { topic, questionerRole, answererRole, maxRounds = DEFAULT_MAX_ROUNDS } = args;
+      const { topic, analystRoles, maxRounds = DEFAULT_MAX_ROUNDS } = args;
       const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50);
       const topicFolder = safeTopic;
       const session = {
-        id: `debate-${safeTopic}`,
+        id: `discussion-${safeTopic}`,
         topic,
-        questionerRole: questionerRole || "质疑方 - 挑战传统观点",
-        answererRole: answererRole || "辩护方 - 维护合理立场",
+        questionerRole: analystRoles || "待定",
+        answererRole: "",
         maxRounds,
         currentRound: 0,
         status: "pending",
         logFile: topicFolder,
         createdAt: new Date().toISOString()
       };
-      const header = generateDebateHeader(topic, questionerRole, answererRole, maxRounds);
-      const logsDir = resolve(directory, DEFAULT_DEBATE_LOG_DIR);
+      const header = generateDebateHeader(topic, analystRoles, "", maxRounds);
+      const logsDir = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR);
       const topicDir = join(logsDir, topicFolder);
       if (!existsSync(logsDir)) {
         await mkdir(logsDir, { recursive: true });
       }
       if (existsSync(topicDir)) {
-        return `辩论主题文件夹已存在: ${DEFAULT_DEBATE_LOG_DIR}/${topicFolder}
+        return `讨论主题文件夹已存在: ${DEFAULT_DISCUSSION_LOG_DIR}/${topicFolder}
 
-请使用新的辩论话题，或删除现有文件夹后重试。`;
+请使用新的讨论话题，或删除现有文件夹后重试。`;
       }
       await mkdir(topicDir, { recursive: true });
       await writeFile(join(topicDir, RECORD_FILE), header, "utf-8");
       await writeFile(join(topicDir, SUMMARY_FILE), "", "utf-8");
-      return `辩论已启动！
+      return `讨论已启动！
 
 话题: ${topic}
 最大轮数: ${maxRounds}
-提问者角色: ${session.questionerRole}
-回答者角色: ${session.answererRole}
+${analystRoles ? `分析者角色: ${analystRoles}` : ""}
 
-记录文件: ${DEFAULT_DEBATE_LOG_DIR}/${topicFolder}/${RECORD_FILE}
+记录文件: ${DEFAULT_DISCUSSION_LOG_DIR}/${topicFolder}/${RECORD_FILE}
 
-请继续进行问答循环。使用 task 工具调用 questioner 获取问题，然后调用 answerer 获取回答。`;
+请确定参与的分析者数量和角色（如技术专家、经济专家等），然后开始讨论循环。`;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      return `启动辩论失败: ${errMsg}`;
+      return `启动讨论失败: ${errMsg}`;
     }
   };
 }
-function createDebateRecordHandler(ctx) {
-  return async function handleDebateRecord(args) {
+function createDiscussionRecordHandler(ctx) {
+  return async function handleDiscussionRecord(args) {
     try {
       const { directory } = ctx;
-      const { logFile, round, question, answer } = args;
-      const entry = generateRoundEntry(round, question, answer);
-      const filePath = resolve(directory, DEFAULT_DEBATE_LOG_DIR, logFile, RECORD_FILE);
+      const { logFile, round, analystName, content, thinking } = args;
+      const analystLogFile = `analyst-${analystName}.log`;
+      const entry = `### 第 ${round} 轮 - ${analystName}
+
+**思考过程**: ${thinking || ""}
+
+**分析内容**:
+${content}
+
+---
+`;
+      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, logFile, analystLogFile);
       const existingContent = await readFile(filePath, "utf-8").catch(() => "");
       await writeFile(filePath, existingContent + entry, "utf-8");
-      return `第 ${round} 轮对话已记录到 ${DEFAULT_DEBATE_LOG_DIR}/${logFile}/${RECORD_FILE}`;
+      const summaryEntry = `### 第 ${round} 轮 - ${analystName}
+
+${content}
+
+---
+`;
+      const recordPath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, logFile, RECORD_FILE);
+      const recordContent = await readFile(recordPath, "utf-8").catch(() => "");
+      await writeFile(recordPath, recordContent + summaryEntry, "utf-8");
+      return `${analystName} 第 ${round} 轮分析已记录`;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      return `记录对话失败: ${errMsg}`;
+      return `记录失败: ${errMsg}`;
     }
   };
 }
-function createDebateSummaryHandler(ctx) {
-  return async function handleDebateSummary(args) {
+function createDiscussionSummaryHandler(ctx) {
+  return async function handleDiscussionSummary(args) {
     try {
       const { directory } = ctx;
       const { logFile, summary, consensus, disagreements, conclusion } = args;
       const report = generateSummarySection(summary, consensus, disagreements, conclusion);
-      const filePath = resolve(directory, DEFAULT_DEBATE_LOG_DIR, logFile, SUMMARY_FILE);
+      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, logFile, SUMMARY_FILE);
       const existingContent = await readFile(filePath, "utf-8").catch(() => "");
       await writeFile(filePath, existingContent + report, "utf-8");
-      return `分析报告已生成并追加到 ${DEFAULT_DEBATE_LOG_DIR}/${logFile}/${SUMMARY_FILE}`;
+      return `分析报告已生成并追加到 ${DEFAULT_DISCUSSION_LOG_DIR}/${logFile}/${SUMMARY_FILE}`;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       return `生成报告失败: ${errMsg}`;
     }
   };
 }
-function createDebateSetupHandler() {
-  return async function handleDebateSetup() {
+function createDiscussionSetupHandler() {
+  return async function handleDiscussionSetup() {
     try {
       const configDir = getConfigDir();
       const agentsDir = join(configDir, "agents");
@@ -395,44 +354,36 @@ function createDebateSetupHandler() {
         await mkdir(commandsDir, { recursive: true });
         results.push(`Created: ${commandsDir}`);
       }
-      await writeFile(join(agentsDir, "debate-host.md"), AGENT_DEBATE_HOST, "utf-8");
-      results.push("Created: debate-host.md");
-      await writeFile(join(agentsDir, "questioner.md"), AGENT_QUESTIONER, "utf-8");
-      results.push("Created: questioner.md");
-      await writeFile(join(agentsDir, "answerer.md"), AGENT_ANSWERER, "utf-8");
-      results.push("Created: answerer.md");
-      await writeFile(join(commandsDir, "debate.md"), COMMAND_DEBATE, "utf-8");
-      results.push("Created: debate.md");
+      await writeFile(join(agentsDir, "discussion-host.md"), AGENT_DISCUSSION_HOST, "utf-8");
+      results.push("Created: discussion-host.md");
+      await writeFile(join(agentsDir, "analyst.md"), AGENT_ANALYST, "utf-8");
+      results.push("Created: analyst.md");
+      await writeFile(join(commandsDir, "discussion.md"), COMMAND_DISCUSSION, "utf-8");
+      results.push("Created: discussion.md");
       const jsonConfig = `{
   "agent": {
-    "debate-host": {
+    "discussion-host": {
       "mode": "primary",
-      "description": "辩论主持人 - 发起话题、协调问答、总结分析",
+      "description": "讨论主持人 - 发起话题、协调讨论、总结分析",
       "permission": {
         "task": {
-          "questioner": "allow",
-          "answerer": "allow"
+          "analyst": "allow"
         }
       },
       "tools": {
-        "debate-start": true,
-        "debate-record": true,
-        "debate-summary": true
+        "discussion-start": true,
+        "discussion-record": true,
+        "discussion-summary": true
       }
     },
-    "questioner": {
+    "analyst": {
       "mode": "subagent",
-      "description": "提问者 - 针对话题提出深入问题",
-      "task_budget": 15
-    },
-    "answerer": {
-      "mode": "subagent",
-      "description": "回答者 - 对问题给出详细回答",
+      "description": "分析者 - 从特定角度分析问题，与其他分析者协作讨论",
       "task_budget": 15
     }
   }
 }`;
-      return `✅ 辩论插件配置完成！重启 opencode 即可使用 /debate 命令启动辩论！
+      return `✅ 讨论插件配置完成！重启 opencode 即可使用 /discussion 命令启动讨论！
 `;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
@@ -442,65 +393,65 @@ function createDebateSetupHandler() {
 }
 
 // .opencode/plugin/index.ts
-var debateAgent = async (ctx) => {
-  const handleDebateStart = createDebateStartHandler(ctx);
-  const handleDebateRecord = createDebateRecordHandler(ctx);
-  const handleDebateSummary = createDebateSummaryHandler(ctx);
-  const handleDebateSetup = createDebateSetupHandler();
+var discussionAgent = async (ctx) => {
+  const handleDiscussionStart = createDiscussionStartHandler(ctx);
+  const handleDiscussionRecord = createDiscussionRecordHandler(ctx);
+  const handleDiscussionSummary = createDiscussionSummaryHandler(ctx);
+  const handleDiscussionSetup = createDiscussionSetupHandler();
   return {
     tool: {
-      "debate-setup": tool({
-        description: "自动配置辩论插件 - 创建agent和command配置文件",
+      "discussion-setup": tool({
+        description: "自动配置讨论插件 - 创建agent和command配置文件",
         args: {},
         async execute() {
-          return await handleDebateSetup();
+          return await handleDiscussionSetup();
         }
       }),
-      "debate-start": tool({
-        description: "启动一场辩论讨论",
+      "discussion-start": tool({
+        description: "启动一场协作式讨论",
         args: {
-          topic: tool.schema.string().describe("辩论话题"),
-          questionerRole: tool.schema.string().optional().describe("提问者角色描述"),
-          answererRole: tool.schema.string().optional().describe("回答者角色描述"),
-          maxRounds: tool.schema.number().default(10).describe("最大辩论轮数")
+          topic: tool.schema.string().describe("讨论话题"),
+          analystRoles: tool.schema.string().optional().describe("分析者角色描述，多个角色用分号分隔"),
+          maxRounds: tool.schema.number().default(10).describe("最大讨论轮数")
         },
         async execute(args, context) {
-          return await handleDebateStart(args);
+          return await handleDiscussionStart(args);
         }
       }),
-      "debate-record": tool({
-        description: "记录辩论对话到文件",
+      "discussion-record": tool({
+        description: "记录分析者的讨论内容",
         args: {
-          logFile: tool.schema.string().describe("日志文件名"),
+          logFile: tool.schema.string().describe("日志文件夹名"),
           round: tool.schema.number().describe("当前轮次"),
-          question: tool.schema.string().describe("提问者的提问"),
-          answer: tool.schema.string().describe("回答者的回答")
+          analystName: tool.schema.string().describe("分析者名称，如 tech, economic, risk"),
+          content: tool.schema.string().describe("分析内容"),
+          thinking: tool.schema.string().optional().describe("思考过程")
         },
         async execute(args, context) {
-          return await handleDebateRecord(args);
+          return await handleDiscussionRecord(args);
         }
       }),
-      "debate-summary": tool({
-        description: "生成辩论分析报告",
+      "discussion-summary": tool({
+        description: "生成讨论分析报告",
         args: {
-          logFile: tool.schema.string().describe("日志文件名"),
+          logFile: tool.schema.string().describe("日志文件夹名"),
           summary: tool.schema.string().describe("讨论摘要"),
           consensus: tool.schema.string().describe("共识点"),
           disagreements: tool.schema.string().describe("分歧点"),
-          conclusion: tool.schema.string().describe("结论")
+          conclusion: tool.schema.string().describe("综合建议")
         },
         async execute(args, context) {
-          return await handleDebateSummary(args);
+          return await handleDiscussionSummary(args);
         }
       })
     }
   };
 };
-var plugin_default = debateAgent;
+var plugin_default = discussionAgent;
 export {
-  plugin_default as default,
-  debateAgent
+  discussionAgent,
+  plugin_default as default
 };
 
-//# debugId=19CB12EEFF2F986364756E2164756E21
+//# debugId=8A3A6479E47F607E64756E2164756E21
 //# sourceMappingURL=index.js.map
