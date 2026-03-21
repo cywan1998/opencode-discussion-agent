@@ -70,16 +70,8 @@ ${conclusion}
 `;
 }
 
-// .opencode/plugin/tools/debate.ts
-var DEFAULT_MAX_ROUNDS = 10;
-var DEFAULT_DISCUSSION_LOG_DIR = "discussion-logs";
-var RECORD_FILE = "record.log";
-var SUMMARY_FILE = "summarize.log";
-function getConfigDir() {
-  const home = process.env.HOME || process.env.USERPROFILE || "";
-  return join(home, ".config", "opencode");
-}
-var AGENT_DISCUSSION_HOST = `---
+// .opencode/plugin/prompts/agents/discussion-host.mdx
+var discussion_host_default = `---
 description: 讨论主持人 - 发起话题、协调讨论、总结分析
 mode: primary
 permission:
@@ -171,7 +163,9 @@ tools:
 - **分歧点**: 各方观点不一致的地方
 - **综合建议**: 基于讨论的综合性建议
 `;
-var AGENT_ANALYST = `---
+
+// .opencode/plugin/prompts/agents/analyst.mdx
+var analyst_default = `---
 description: 分析者 - 从特定角度分析问题，与其他分析者协作讨论
 mode: subagent
 temperature: 0.7
@@ -230,7 +224,9 @@ tools:
 
 分析会自动保存到你的个人日志文件中。
 `;
-var COMMAND_DISCUSSION = `---
+
+// .opencode/plugin/prompts/commands/discussion.mdx
+var discussion_default = `---
 description: 启动一场协作式讨论
 agent: discussion-host
 ---
@@ -246,6 +242,16 @@ agent: discussion-host
 5. 判断是否形成共识或达到最大轮数
 6. 使用 discussion-summary 生成分析报告
 `;
+
+// .opencode/plugin/tools/debate.ts
+var DEFAULT_MAX_ROUNDS = 10;
+var DEFAULT_DISCUSSION_LOG_DIR = "discussion-logs";
+var RECORD_FILE = "record.log";
+var SUMMARY_FILE = "summarize.log";
+function getConfigDir() {
+  const home = process.env.HOME || process.env.USERPROFILE || "";
+  return join(home, ".config", "opencode");
+}
 function createDiscussionStartHandler(ctx) {
   return async function handleDiscussionStart(args) {
     try {
@@ -381,11 +387,11 @@ function createDiscussionSetupHandler() {
         await mkdir(commandsDir, { recursive: true });
         results.push(`Created: ${commandsDir}`);
       }
-      await writeFile(join(agentsDir, "discussion-host.md"), AGENT_DISCUSSION_HOST, "utf-8");
+      await writeFile(join(agentsDir, "discussion-host.md"), discussion_host_default, "utf-8");
       results.push("Created: discussion-host.md");
-      await writeFile(join(agentsDir, "analyst.md"), AGENT_ANALYST, "utf-8");
+      await writeFile(join(agentsDir, "analyst.md"), analyst_default, "utf-8");
       results.push("Created: analyst.md");
-      await writeFile(join(commandsDir, "discussion.md"), COMMAND_DISCUSSION, "utf-8");
+      await writeFile(join(commandsDir, "discussion.md"), discussion_default, "utf-8");
       results.push("Created: discussion.md");
       const jsonConfig = `{
   "agent": {
@@ -491,5 +497,5 @@ export {
   plugin_default as default
 };
 
-//# debugId=2624EC20B5CB942C64756E2164756E21
+//# debugId=517B023F5279520964756E2164756E21
 //# sourceMappingURL=index.js.map

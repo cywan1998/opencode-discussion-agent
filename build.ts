@@ -11,6 +11,9 @@ const config = {
   sourcemap: true,
   minify: false,
   external: ["@opencode-ai/plugin"],
+  loader: {
+    ".mdx": "text",
+  },
 }
 
 if (isWatch) {

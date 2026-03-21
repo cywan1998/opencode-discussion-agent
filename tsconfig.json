@@ -15,6 +15,7 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
+    "jsx": "preserve",
     "types": ["bun-types"]
   },
   "include": [".opencode/plugin/**/*"],

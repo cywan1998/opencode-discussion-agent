@@ -1,0 +1,15 @@
+---
+description: 启动一场协作式讨论
+agent: discussion-host
+---
+请作为讨论主持人启动一场协作式讨论。
+
+讨论话题是: {{input}}
+
+请按照以下步骤进行：
+1. 使用 discussion-start 工具初始化讨论
+2. 确定参与的分析者数量和角色（如技术专家、经济专家等）
+3. 协调讨论循环，每轮调用各分析者
+4. 使用 discussion-record 记录每轮分析
+5. 判断是否形成共识或达到最大轮数
+6. 使用 discussion-summary 生成分析报告
