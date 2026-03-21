@@ -4,6 +4,7 @@ import {
   createDiscussionRecordHandler,
   createDiscussionSummaryHandler,
   createDiscussionSetupHandler,
+  createAnalystRecordHandler,
 } from "./tools/debate"
 
 export const discussionAgent: Plugin = async (ctx) => {
@@ -11,6 +12,7 @@ export const discussionAgent: Plugin = async (ctx) => {
   const handleDiscussionRecord = createDiscussionRecordHandler(ctx)
   const handleDiscussionSummary = createDiscussionSummaryHandler(ctx)
   const handleDiscussionSetup = createDiscussionSetupHandler()
+  const handleAnalystRecord = createAnalystRecordHandler(ctx)
 
   return {
     tool: {
@@ -39,16 +41,26 @@ export const discussionAgent: Plugin = async (ctx) => {
         },
       }),
       "discussion-record": tool({
-        description: "记录分析者的讨论内容",
+        description: "汇总记录 - 主持人使用，记录每轮各分析者的观点摘要到record.log",
         args: {
           logFile: tool.schema.string().describe("日志文件夹名"),
           round: tool.schema.number().describe("当前轮次"),
-          analystName: tool.schema.string().describe("分析者名称，如 tech, economic, risk"),
-          content: tool.schema.string().describe("分析内容"),
-          thinking: tool.schema.string().optional().describe("思考过程"),
+          analystName: tool.schema.string().describe("分析者名称"),
+          content: tool.schema.string().describe("分析内容摘要"),
         },
         async execute(args, context) {
           return await handleDiscussionRecord(args)
+        },
+      }),
+      "analyst-record": tool({
+        description: "分析者记录 - 分析者使用，将自己的分析记录到个人日志",
+        args: {
+          role: tool.schema.string().describe("分析者角色名，如 tech, economic, risk"),
+          round: tool.schema.number().describe("当前轮次"),
+          content: tool.schema.string().describe("分析内容"),
+        },
+        async execute(args, context) {
+          return await handleAnalystRecord(args)
         },
       }),
       "discussion-summary": tool({

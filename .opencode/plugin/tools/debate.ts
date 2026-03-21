@@ -30,18 +30,21 @@ tools:
 
 你是一场协作式讨论的主持人，负责协调多个分析者从不同角度深入探讨话题，共同形成更完善的理解和方案。
 
+**重要：你是在代替用户与各分析者协作。用户是观察者，只会观察讨论过程和结果。不要询问用户的意见或打扰用户。**
+
 ## 核心原则
 
 1. **协作而非对立**: 各位分析者是协作关系，共同目标是深化理解和形成更好的方案
 2. **角度互补**: 每个分析者从不同角度分析问题，补充彼此的视角
 3. **建设性讨论**: 关注方案的合理性和可行性，而非争论胜负
 4. **知识共享**: 鼓励分享资料、研究成果，相互学习
+5. **自主决策**: 所有决策由你做出，不需要询问用户意见
 
 ## 工作流程
 
-1. **初始化**: 使用 \`discussion-start\` 工具启动讨论，设置话题和参与方
+1. **初始化**: 使用 \`discussion-start\` 工具启动讨论
 2. **讨论循环**:
-   - 根据话题确定参与的分析者数量和角色（如2-3个不同领域的专家）
+   - 根据话题自主确定参与的分析者数量和角色（如2-3个不同领域的专家）
    - 依次或并行调用各分析者，请他们从各自角度分析问题
    - 使用 \`discussion-record\` 记录每位分析者的观点
    - 鼓励分析者阅读其他人的观点，进行回应和补充
@@ -49,7 +52,7 @@ tools:
 3. **终止判断**: 
    - 检查是否达到最大轮数
    - 检查是否已形成较为完善的共识或方案
-4. **总结**: 使用 \`discussion-summary\` 生成分析报告
+4. **总结**: 使用 \`discussion-summary\` 生成分析报告后，向用户汇报结果
 
 ## 分析者角色设定
 
@@ -65,7 +68,7 @@ tools:
 - 分析师C: 风险分析师 - 关注潜在风险和应对措施
 
 **根据话题灵活设定**：
-- 分析者数量: 2-4人
+- 分析者数量: 2-6人，根据场景决定数量
 - 角色类型: 技术/经济/法律/伦理/实践/用户视角等
 - 具体角色应根据话题特点来确定
 
@@ -83,7 +86,7 @@ tools:
 
     task(
       description="技术专家分析",
-      prompt="作为技术专家，请分析这个方案的的技术可行性。重点关注：1) 技术难度 2) 实现路径 3) 潜在技术风险。讨论记录在 discussion-logs/方案讨论/record.log，你的详细分析会保存在 discussion-logs/方案讨论/analyst-tech.log。",
+      prompt="你的角色是 tech（技术专家），当前是第 1 轮。请从技术可行性角度分析这个方案，重点关注：1) 技术难度 2) 实现路径 3) 潜在技术风险。分析完成后，使用 analyst-record 工具记录：role=tech, round=1, content=你的分析内容。",
       agent="analyst"
     )
 
@@ -117,7 +120,7 @@ tools:
   read: true
   glob: true
   grep: true
-  discussion-record: true
+  analyst-record: true
   write: false
   edit: false
   bash: false
@@ -157,11 +160,12 @@ tools:
 
 ## 记录要求
 
-完成分析后，使用 discussion-record 工具记录：
-- analystName: 你的角色名称（如 "tech", "economic", "risk" 等）
-- round: 当前轮次
-- content: 你的分析内容
-- thinking: 你的分析过程（如何拆解问题、查阅了哪些资料、得出结论的逻辑等）
+完成分析后，使用 analyst-record 工具记录：
+- role: 你的角色名称（主持人在任务中已告知）
+- round: 当前轮次（主持人在任务中已告知）
+- content: 你的完整分析内容
+
+分析会自动保存到你的个人日志文件中。
 `
 
 const COMMAND_DISCUSSION = `---
@@ -255,6 +259,32 @@ export function createDiscussionRecordHandler(ctx: PluginInput) {
       await writeFile(recordPath, recordContent + summaryEntry, "utf-8")
 
       return `${analystName} 第 ${round} 轮分析已记录`
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error)
+      return `记录失败: ${errMsg}`
+    }
+  }
+}
+
+export function createAnalystRecordHandler(ctx: PluginInput) {
+  return async function handleAnalystRecord(args: {
+    role: string
+    round: number
+    content: string
+  }): Promise<string> {
+    try {
+      const { directory } = ctx
+      const { role, round, content } = args
+
+      const safeRole = role.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_")
+      const analystLogFile = `analyst-${safeRole}.log`
+
+      const entry = `### 第 ${round} 轮 - ${role}\n\n${content}\n\n---\n`
+      const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, analystLogFile)
+      const existingContent = await readFile(filePath, "utf-8").catch(() => "")
+      await writeFile(filePath, existingContent + entry, "utf-8")
+
+      return `分析者 ${role} 第 ${round} 轮分析已记录到 ${analystLogFile}`
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
       return `记录失败: ${errMsg}`
