@@ -6,7 +6,9 @@ import type { DebateSession } from "../types"
 import { generateDebateHeader, generateRoundEntry, generateSummarySection } from "../utils/logger"
 
 const DEFAULT_MAX_ROUNDS = 10
-const DEFAULT_DEBATE_LOG_DIR = ".opencode/debate-logs"
+const DEFAULT_DEBATE_LOG_DIR = "debate-logs"
+const RECORD_FILE = "record.log"
+const SUMMARY_FILE = "summarize.log"
 
 function getConfigDir(): string {
   const home = process.env.HOME || process.env.USERPROFILE || ""
@@ -36,10 +38,17 @@ tools:
    - 使用 task 调用 questioner 获取问题
    - 使用 task 调用 answerer 获取回答
    - 使用 \`debate-record\` 记录每轮对话
+   - **提示**: 每次调用子 agent 时，可以在 prompt 中告知他们对话记录位置：\`debate-logs/{topic}/record.log\`，子 agent 可以使用 read 工具阅读之前的对话内容
 3. **终止判断**: 
    - 检查是否达到最大轮数
    - 检查双方是否达成共识
 4. **总结**: 使用 \`debate-summary\` 生成分析报告
+
+## 对话记录
+
+- 对话记录保存在: \`debate-logs/{topic}/record.log\`
+- 总结报告保存在: \`debate-logs/{topic}/summarize.log\`
+- **重要**: 在调用子 agent 时，可以提醒他们使用 read 工具查阅之前的对话内容
 
 ## Task 工具调用规范
 
@@ -49,15 +58,15 @@ tools:
 2. 话题内容用英文双引号或不用引号
 3. prompt 应该是纯文本，不要包含特殊格式字符
 4. **可以在 prompt 中告诉 subagent 他们可以使用搜索工具**
+5. **可以提醒 subagent 使用 read 工具读取 \`debate-logs/{topic}/record.log\` 查阅对话历史**
 
 **正确示例**:
-\`\`\`
-task(
-  description="提问者提出问题",
-  prompt="作为反对伊朗关闭霍尔木兹海峡的中东国家代表，围绕伊朗关闭霍尔木兹海峡对中东国家的影响这个话题，提出你的第一个问题。你可以使用 websearch 搜索相关信息来支持你的论点。",
-  agent="questioner"
-)
-\`\`\`
+
+    task(
+      description="提问者提出问题",
+      prompt="作为反对伊朗关闭霍尔木兹海峡的中东国家代表，围绕伊朗关闭霍尔木兹海峡对中东国家的影响这个话题，提出你的第一个问题。你可以使用 websearch 搜索相关信息来支持你的论点。辩论记录保存在 debate-logs/伊朗核问题/record.log，如有需要可以使用 read 工具查阅。",
+      agent="questioner"
+    )
 
 ## 角色设定
 
@@ -226,32 +235,39 @@ export function createDebateStartHandler(ctx: PluginInput) {
       const { directory } = ctx
       const { topic, questionerRole, answererRole, maxRounds = DEFAULT_MAX_ROUNDS } = args
 
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
       const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50)
-      const logFile = `${timestamp}_${safeTopic}.md`
+      const topicFolder = safeTopic
 
       const session: DebateSession = {
-        id: `debate-${timestamp}`,
+        id: `debate-${safeTopic}`,
         topic,
         questionerRole: questionerRole || "质疑方 - 挑战传统观点",
         answererRole: answererRole || "辩护方 - 维护合理立场",
         maxRounds,
         currentRound: 0,
         status: "pending",
-        logFile,
+        logFile: topicFolder,
         createdAt: new Date().toISOString(),
       }
 
       const header = generateDebateHeader(topic, questionerRole, answererRole, maxRounds)
-      const logDir = `${directory}/${DEFAULT_DEBATE_LOG_DIR}`
+      const logsDir = resolve(directory, DEFAULT_DEBATE_LOG_DIR)
+      const topicDir = join(logsDir, topicFolder)
 
-      if (!existsSync(logDir)) {
-        await mkdir(logDir, { recursive: true })
+      if (!existsSync(logsDir)) {
+        await mkdir(logsDir, { recursive: true })
       }
 
-      await writeFile(`${logDir}/${logFile}`, header, "utf-8")
+      if (existsSync(topicDir)) {
+        return `辩论主题文件夹已存在: ${DEFAULT_DEBATE_LOG_DIR}/${topicFolder}\n\n请使用新的辩论话题，或删除现有文件夹后重试。`
+      }
 
-      return `辩论已启动！\n\n话题: ${topic}\n最大轮数: ${maxRounds}\n提问者角色: ${session.questionerRole}\n回答者角色: ${session.answererRole}\n\n记录文件: ${DEFAULT_DEBATE_LOG_DIR}/${logFile}\n\n请继续进行问答循环。使用 task 工具调用 questioner 获取问题，然后调用 answerer 获取回答。`
+      await mkdir(topicDir, { recursive: true })
+
+      await writeFile(join(topicDir, RECORD_FILE), header, "utf-8")
+      await writeFile(join(topicDir, SUMMARY_FILE), "", "utf-8")
+
+      return `辩论已启动！\n\n话题: ${topic}\n最大轮数: ${maxRounds}\n提问者角色: ${session.questionerRole}\n回答者角色: ${session.answererRole}\n\n记录文件: ${DEFAULT_DEBATE_LOG_DIR}/${topicFolder}/${RECORD_FILE}\n\n请继续进行问答循环。使用 task 工具调用 questioner 获取问题，然后调用 answerer 获取回答。`
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
       return `启动辩论失败: ${errMsg}`
@@ -271,12 +287,12 @@ export function createDebateRecordHandler(ctx: PluginInput) {
       const { logFile, round, question, answer } = args
 
       const entry = generateRoundEntry(round, question, answer)
-      const filePath = `${directory}/${DEFAULT_DEBATE_LOG_DIR}/${logFile}`
+      const filePath = resolve(directory, DEFAULT_DEBATE_LOG_DIR, logFile, RECORD_FILE)
 
       const existingContent = await readFile(filePath, "utf-8").catch(() => "")
       await writeFile(filePath, existingContent + entry, "utf-8")
 
-      return `第 ${round} 轮对话已记录到 ${logFile}`
+      return `第 ${round} 轮对话已记录到 ${DEFAULT_DEBATE_LOG_DIR}/${logFile}/${RECORD_FILE}`
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
       return `记录对话失败: ${errMsg}`
@@ -297,12 +313,12 @@ export function createDebateSummaryHandler(ctx: PluginInput) {
       const { logFile, summary, consensus, disagreements, conclusion } = args
 
       const report = generateSummarySection(summary, consensus, disagreements, conclusion)
-      const filePath = `${directory}/${DEFAULT_DEBATE_LOG_DIR}/${logFile}`
+      const filePath = resolve(directory, DEFAULT_DEBATE_LOG_DIR, logFile, SUMMARY_FILE)
 
       const existingContent = await readFile(filePath, "utf-8").catch(() => "")
       await writeFile(filePath, existingContent + report, "utf-8")
 
-      return `分析报告已生成并追加到 ${logFile}`
+      return `分析报告已生成并追加到 ${DEFAULT_DEBATE_LOG_DIR}/${logFile}/${SUMMARY_FILE}`
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error)
       return `生成报告失败: ${errMsg}`
