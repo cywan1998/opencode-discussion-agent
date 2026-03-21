@@ -58,6 +58,7 @@ export const discussionAgent: Plugin = async (ctx) => {
           topic: tool.schema.string().describe("讨论话题"),
           role: tool.schema.string().describe("分析者角色名，如 tech, economic, risk"),
           round: tool.schema.number().describe("当前轮次"),
+          question: tool.schema.string().optional().describe("主持人的问题"),
           content: tool.schema.string().describe("分析内容"),
         },
         async execute(args, context) {

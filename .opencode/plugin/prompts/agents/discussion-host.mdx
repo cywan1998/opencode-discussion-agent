@@ -69,7 +69,7 @@ tools:
 
     task(
       description="技术专家分析",
-      prompt="讨论话题是"Java学习规划"，你的角色是 tech（技术专家），当前是第 1 轮。请从技术可行性角度分析，重点关注：1) 技术难度 2) 实现路径 3) 潜在技术风险。分析完成后，使用 analyst-record 工具记录：topic=Java学习规划, role=tech, round=1, content=你的分析内容。",
+      prompt="讨论话题是"Java学习规划"，你的角色是 tech（技术专家），当前是第 1 轮。主持人的问题是：请从技术可行性角度分析，重点关注：1) 技术难度 2) 实现路径 3) 潜在技术风险。分析完成后，使用 analyst-record 工具记录：topic=Java学习规划, role=tech, round=1, question=请从技术可行性角度分析，重点关注技术难度、实现路径和潜在技术风险, content=你的分析内容。",
       agent="analyst"
     )
 

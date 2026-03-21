@@ -134,7 +134,7 @@ tools:
 
     task(
       description="技术专家分析",
-      prompt="讨论话题是"Java学习规划"，你的角色是 tech（技术专家），当前是第 1 轮。请从技术可行性角度分析，重点关注：1) 技术难度 2) 实现路径 3) 潜在技术风险。分析完成后，使用 analyst-record 工具记录：topic=Java学习规划, role=tech, round=1, content=你的分析内容。",
+      prompt="讨论话题是"Java学习规划"，你的角色是 tech（技术专家），当前是第 1 轮。主持人的问题是：请从技术可行性角度分析，重点关注：1) 技术难度 2) 实现路径 3) 潜在技术风险。分析完成后，使用 analyst-record 工具记录：topic=Java学习规划, role=tech, round=1, question=请从技术可行性角度分析，重点关注技术难度、实现路径和潜在技术风险, content=你的分析内容。",
       agent="analyst"
     )
 
@@ -213,6 +213,7 @@ tools:
 - topic: 讨论话题（主持人在任务中已告知）
 - role: 你的角色名称（主持人在任务中已告知）
 - round: 当前轮次（主持人在任务中已告知）
+- question: 主持人的问题（主持人在任务中已告知）
 - content: 你的完整分析内容
 
 分析会自动保存到你的个人日志文件中。
@@ -318,12 +319,15 @@ function createAnalystRecordHandler(ctx) {
   return async function handleAnalystRecord(args) {
     try {
       const { directory } = ctx;
-      const { topic, role, round, content } = args;
+      const { topic, role, round, question, content } = args;
       const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50);
       const safeRole = role.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
       const analystLogFile = `analyst-${safeRole}.log`;
       const entry = `### 第 ${round} 轮 - ${role}
 
+**主持人的问题**: ${question || ""}
+
+**分析内容**:
 ${content}
 
 ---
@@ -430,6 +434,7 @@ var discussionAgent = async (ctx) => {
           topic: tool.schema.string().describe("讨论话题"),
           role: tool.schema.string().describe("分析者角色名，如 tech, economic, risk"),
           round: tool.schema.number().describe("当前轮次"),
+          question: tool.schema.string().optional().describe("主持人的问题"),
           content: tool.schema.string().describe("分析内容")
         },
         async execute(args, context) {
@@ -458,5 +463,5 @@ export {
   plugin_default as default
 };
 
-//# debugId=9801CF2D5A01FDBD64756E2164756E21
+//# debugId=89571DB800C835AA64756E2164756E21
 //# sourceMappingURL=index.js.map
