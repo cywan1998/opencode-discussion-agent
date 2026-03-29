@@ -35,9 +35,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cywan1998/open-debate-agent"
+    "url": "https://github.com/cywan1998/opencode-discussion-agent"
   },
   "bugs": {
-    "url": "https://github.com/cywan1998/open-debate-agent/issues"
+    "url": "https://github.com/cywan1998/opencode-discussion-agent/issues"
   }
 }
