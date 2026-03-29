@@ -11,55 +11,55 @@ function generateDiscussionHeader(topic, analystRoles, maxRounds) {
   const now = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
   return `# 讨论记录
 
-## 基本信息
+          ## 基本信息
 
-- **话题**: ${topic}
-- **时间**: ${now}
-- **最大轮数**: ${maxRounds || 10}
-- **状态**: 进行中
+          - **话题**: ${topic}
+          - **时间**: ${now}
+          - **最大轮数**: ${maxRounds || 10}
+          - **状态**: 进行中
 
----
+          ---
 
-## 参与方
+          ## 参与方
 
-${analystRoles ? `分析者角色: ${analystRoles}` : "待定"}
+          ${analystRoles ? `分析者角色: ${analystRoles}` : "待定"}
 
----
+          ---
 
-## 讨论记录
+          ## 讨论记录
 
----
-`;
+          ---
+        `;
 }
 function generateSummarySection(summary, consensus, disagreements, conclusion) {
   return `## 分析报告
 
-### 讨论摘要
+          ### 讨论摘要
 
-${summary}
+          ${summary}
 
----
+          ---
 
-### 共识点
+          ### 共识点
 
-${consensus || "无"}
+          ${consensus || "无"}
 
----
+          ---
 
-### 分歧点
+          ### 分歧点
 
-${disagreements || "无"}
+          ${disagreements || "无"}
 
----
+          ---
 
-### 综合建议
+          ### 综合建议
 
-${conclusion}
+          ${conclusion}
 
----
+          ---
 
-*讨论结束*
-`;
+          *讨论结束*
+          `;
 }
 
 // .opencode/plugin/prompts/agents/discussion-host.mdx
@@ -322,16 +322,15 @@ function createAnalystRecordHandler(ctx) {
       const { topic, role, round, question, content } = args;
       const safeTopic = topic.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_").slice(0, 50);
       const safeRole = role.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "_");
-      const analystLogFile = `analyst-${safeRole}.log`;
+      const analystLogFile = `analyst-${safeRole}_${round}.log`;
       const entry = `### 第 ${round} 轮 - ${role}
 
-**主持人的问题**: ${question || ""}
+          **主持人的问题**: ${question || ""}
 
-**分析内容**:
-${content}
-
----
-`;
+          **分析内容**:
+          ${content}
+      ---
+      `;
       const filePath = resolve(directory, DEFAULT_DISCUSSION_LOG_DIR, safeTopic, analystLogFile);
       const existingContent = await readFile(filePath, "utf-8").catch(() => "");
       await writeFile(filePath, existingContent + entry, "utf-8");
@@ -380,8 +379,7 @@ function createDiscussionSetupHandler() {
       results.push("Created: analyst.md");
       await writeFile(join(commandsDir, "discussion.md"), discussion_default, "utf-8");
       results.push("Created: discussion.md");
-      return `✅ 讨论插件配置完成！重启 opencode 即可使用 /discussion 命令启动讨论！
-`;
+      return `✅ 讨论插件配置完成！重启 opencode 即可使用 /discussion 命令启动讨论！`;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       return `配置失败: ${errMsg}`;
@@ -463,5 +461,5 @@ export {
   plugin_default as default
 };
 
-//# debugId=89571DB800C835AA64756E2164756E21
+//# debugId=4876201D84658B3264756E2164756E21
 //# sourceMappingURL=index.js.map

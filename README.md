@@ -22,44 +22,64 @@ The agents collaborate rather than debate - each brings their expertise to colle
 - Consensus detection and configurable round limits
 - Web search capabilities for real-time information
 
-## Quick Start
+## Installation
 
-### 1. Install Plugin
+### 1. Install the package
 
-Add to your `opencode.json`:
+```bash
+npm install opencode-discussion-agent
+# or
+bun add opencode-discussion-agent
+```
+
+### 2. Configure OpenCode
+
+Add the plugin to your `opencode.json`:
 
 ```json
 {
-  "plugin": ["opencode-debate-agent"]
+  "plugin": ["opencode-discussion-agent"]
 }
 ```
 
-### 2. Restart OpenCode
+### 3. Restart OpenCode
 
-Restart your OpenCode session.
+Restart your OpenCode session to load the plugin.
 
-### 3. Run Setup
+### 4. Run Setup
 
-Input this during AI init:
+During your OpenCode session, tell the AI:
 
 ```
-use discussion-setup to init discussion agents
+请使用 discussion-setup 来初始化讨论代理
 ```
 
-This will automatically create:
-- `~/.config/opencode/agents/discussion-host.md`
-- `~/.config/opencode/agents/analyst.md`
-- `~/.config/opencode/commands/discussion.md`
+This will automatically create the following configuration files:
+- `~/.config/opencode/agents/discussion-host.md` - Discussion host agent configuration
+- `~/.config/opencode/agents/analyst.md` - Analyst agent configuration
+- `~/.config/opencode/commands/discussion.md` - Discussion command definition
 
-### 4. Restart and Use
+### 5. Restart OpenCode Again
 
-Restart OpenCode, then start a discussion:
+Restart to load the new agents and commands.
+
+## Usage
+
+### Start a Discussion
+
+Use the `/discussion` command to start a new discussion:
 
 ```
 /discussion 如何优化团队协作流程
 ```
 
-## Discussion Workflow
+The discussion host will:
+1. Assign roles to analysts based on the topic
+2. Guide the discussion through multiple rounds
+3. Summarize consensus and disagreements
+4. Generate a final analysis report
+
+### Discussion Workflow
 
 1. **Host** starts the discussion with a topic
 2. **Host** assigns roles to analysts (e.g., Technical Expert, Economic Analyst, Risk Analyst)
@@ -72,6 +92,8 @@ Restart OpenCode, then start a discussion:
 5. Final report generated
 
 ## Logging Structure
+
+Discussion logs are saved in the current working directory:
 
 ```
 discussion-logs/{topic}/
@@ -101,7 +123,7 @@ Each analyst receives context including:
 
 The default configuration does not specify models. You can customize by editing the agent files:
 
-### Edit Agent Markdown Files
+### Edit Discussion Host Agent
 
 Edit `~/.config/opencode/agents/discussion-host.md`:
 
@@ -109,9 +131,11 @@ Edit `~/.config/opencode/agents/discussion-host.md`:
 ---
 description: 讨论主持人
 mode: primary
-model: qwen3-max  # Add your preferred model
+model: qwen3-max
 ---
 ```
+
+### Edit Analyst Agent
 
 Edit `~/.config/opencode/agents/analyst.md`:
 
@@ -119,7 +143,7 @@ Edit `~/.config/opencode/agents/analyst.md`:
 ---
 description: 分析者
 mode: subagent
-model: claude-opus-4-5  # Add your preferred model
+model: qwen3-coder-plus
 task_budget: 20
 ---
 ```
@@ -134,14 +158,14 @@ task_budget: 20
 ## Project Structure
 
 ```
-opencode-debate-agent/
+opencode-discussion-agent/
 ├── .opencode/
 │   └── plugin/
 │       ├── index.ts       # Plugin entry point
 │       ├── tools/
-│       │   └── debate.ts # Discussion tool implementations
+│       │   └── debate.ts  # Discussion tool implementations
 │       ├── types/
-│       │   └── index.ts  # Type definitions
+│       │   └── index.ts   # Type definitions
 │       └── utils/
 │           └── logger.ts # Markdown formatting utilities
 ├── package.json

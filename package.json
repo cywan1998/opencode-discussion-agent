@@ -1,5 +1,5 @@
 {
-  "name": "opencode-debate-agent",
+  "name": "opencode-discussion-agent",
   "version": "1.0.0",
   "description": "OpenCode plugin for structured debate discussions between AI agents",
   "main": ".opencode/plugin/index.js",
@@ -35,9 +35,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourname/opencode-debate-agent"
+    "url": "https://github.com/cywan1998/open-debate-agent"
   },
   "bugs": {
-    "url": "https://github.com/yourname/opencode-debate-agent/issues"
+    "url": "https://github.com/cywan1998/open-debate-agent/issues"
   }
 }
